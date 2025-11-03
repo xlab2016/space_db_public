@@ -1,0 +1,115 @@
+﻿using AI.Client;
+using AI.Client.Configuration;
+using Microsoft.Extensions.Options;
+using SpaceDb.Mappings;
+using SpaceDb.Services;
+using SpaceDb.Services.Parsers;
+
+namespace SpaceDb.Helpers
+{
+    static class StartupHelper
+    {
+        public static void AddMapping(this WebApplicationBuilder source)
+        {
+            var services = source.Services;
+
+            services.AddScoped<DbMapContext>();
+
+            services.AddScoped<UserMap>();
+            services.AddScoped<RoleMap>();
+            services.AddScoped<UserRoleMap>();
+            services.AddScoped<TenantMap>();
+            services.AddScoped<SingularityMap>();
+        }
+
+        public static void AddServices(this WebApplicationBuilder source)
+        {
+            var services = source.Services;
+            var configuration = source.Configuration;
+
+            var connection = new QAiConnection
+            {
+                Host = configuration["Providers:QAi:Host"],
+                UserName = configuration["Providers:QAi:Username"],
+                Password = configuration["Providers:QAi:Password"],
+                ApiToken = configuration["Providers:QAi:ApiToken"],
+            };
+            services.AddSingleton(connection);
+            var filesConnection = new QAiFilesConnection
+            {
+                Host = configuration["Providers:QAiFiles:Host"]
+            };
+            services.AddSingleton(filesConnection);
+            services.AddScoped<QAiClient>().AddHttpClient();
+
+            // Embedding Provider
+            services.AddScoped<IEmbeddingProvider, QAiEmbeddingProvider>();
+
+            // RocksDB Service
+            services.AddSingleton<IRocksDbService>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<RocksDbService>>();
+                var dbPath = Environment.GetEnvironmentVariable("ROCKSDB_PATH") ??
+                             Path.Combine(Directory.GetCurrentDirectory(), "rocksdb");
+                return new RocksDbService(dbPath, logger);
+            });
+
+            // Qdrant Services
+            services.Configure<QdrantConfig>(configuration.GetSection("Providers:Qdrant"));
+            services.AddScoped<IQdrantService>(provider =>
+            {
+                var config = provider.GetRequiredService<IOptions<QdrantConfig>>().Value;
+                var logger = provider.GetRequiredService<ILogger<QdrantService>>();
+                var embeddingProvider = provider.GetRequiredService<IEmbeddingProvider>();
+                return new QdrantService(config, logger, embeddingProvider);
+            });
+
+            services.AddScoped<IQdrantPayloadIndexService>(provider =>
+            {
+                var qdrantService = provider.GetRequiredService<IQdrantService>();
+                var config = provider.GetRequiredService<IOptions<QdrantConfig>>().Value;
+                var logger = provider.GetRequiredService<ILogger<QdrantPayloadIndexService>>();
+                return new QdrantPayloadIndexService(qdrantService, config, logger);
+            });
+
+            // SpaceDb Service
+            services.AddScoped<ISpaceDbService, SpaceDbService>();
+
+            // Content Parsers
+            services.AddSingleton<PayloadParserBase, TextPayloadParser>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<TextPayloadParser>>();
+                return new TextPayloadParser(logger, minParagraphLength: 50, maxParagraphLength: 2000);
+            });
+
+            services.AddSingleton<PayloadParserBase, JsonPayloadParser>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<JsonPayloadParser>>();
+                return new JsonPayloadParser(logger, maxDepth: 10, includeArrays: true);
+            });
+
+            // Content Parser Service
+            services.AddScoped<IContentParserService>(provider =>
+            {
+                var spaceDbService = provider.GetRequiredService<ISpaceDbService>();
+                var embeddingProvider = provider.GetRequiredService<IEmbeddingProvider>();
+                var logger = provider.GetRequiredService<ILogger<ContentParserService>>();
+                var parsers = provider.GetServices<PayloadParserBase>();
+                var config = provider.GetRequiredService<IOptions<QdrantConfig>>().Value;
+
+                return new ContentParserService(
+                    spaceDbService,
+                    embeddingProvider,
+                    logger,
+                    parsers,
+                    config.EmbeddingType);
+            });
+        }
+
+        public static void AddProviders(this WebApplicationBuilder source)
+        {
+            var services = source.Services;
+
+        }
+    }
+}
