@@ -20,6 +20,7 @@ namespace SpaceDb.Helpers
             services.AddScoped<UserRoleMap>();
             services.AddScoped<TenantMap>();
             services.AddScoped<SingularityMap>();
+            services.AddScoped<WorkflowLogMap>();
         }
 
         public static void AddServices(this WebApplicationBuilder source)

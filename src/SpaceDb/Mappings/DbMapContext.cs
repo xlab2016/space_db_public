@@ -8,6 +8,7 @@ namespace SpaceDb.Mappings
         public UserRoleMap UserRoleMap { get; }
         public TenantMap TenantMap { get; }
         public SingularityMap SingularityMap { get; }
+        public WorkflowLogMap WorkflowLogMap { get; }
 
         public DbMapContext()
         {
@@ -16,6 +17,7 @@ namespace SpaceDb.Mappings
             UserRoleMap = new UserRoleMap(this);
             TenantMap = new TenantMap(this);
             SingularityMap = new SingularityMap(this);
+            WorkflowLogMap = new WorkflowLogMap(this);
         }
     }
 }

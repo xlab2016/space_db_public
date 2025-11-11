@@ -11,6 +11,7 @@ namespace SpaceDb.Data.SpaceDb.DatabaseContext
         public DbSet<UserRole>? UserRoles { get; set; }
         public DbSet<Tenant>? Tenants { get; set; }
         public DbSet<Singularity>? Singularities { get; set; }
+        public DbSet<WorkflowLog>? WorkflowLogs { get; set; }
 
         public SpaceDbContext(DbContextOptions<SpaceDbContext> options)
             : base(options)
@@ -24,6 +25,7 @@ namespace SpaceDb.Data.SpaceDb.DatabaseContext
             modelBuilder.ApplyConfiguration(new UserRolesConfiguration());
             modelBuilder.ApplyConfiguration(new TenantsConfiguration { IsInMemoryDb = this.IsInMemoryDb() });
             modelBuilder.ApplyConfiguration(new SingularitiesConfiguration());
+            modelBuilder.ApplyConfiguration(new WorkflowLogsConfiguration());
         }
     }
 }

@@ -65,4 +65,12 @@ namespace SpaceDb.Data.SpaceDb.DatabaseContext
             builder.HasKey(x => x.Id);
         }
     }
+
+    public class WorkflowLogsConfiguration : IEntityTypeConfiguration<WorkflowLog>
+    {
+        public void Configure(EntityTypeBuilder<WorkflowLog> builder)
+        {
+            builder.HasKey(x => x.Id);
+        }
+    }
 }
